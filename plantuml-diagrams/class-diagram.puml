@@ -1,0 +1,162 @@
+@startuml
+title Figure 3.4: Class Diagram - BookNest (13 Entities)
+
+' A4 landscape friendly rendering
+scale max 1600*1050
+skinparam dpi 150
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam linetype ortho
+skinparam nodesep 28
+skinparam ranksep 24
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+skinparam titleFontSize 18
+skinparam titleFontStyle plain
+skinparam classAttributeIconSize 0
+skinparam class {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+  HeaderBackgroundColor #9FD3A4
+  HeaderFontColor #111111
+  FontColor #111111
+  FontSize 9
+}
+skinparam ArrowColor #555555
+skinparam ArrowFontColor #111111
+skinparam ArrowFontSize 8
+
+class User {
+  - id : Integer
+  - name : String
+  - email : String
+  - passwordHash : String
+  - phone : String
+  - role : UserRole
+  - coinBalance : Integer
+  - verificationStatus : String
+  - isActive : Boolean
+  - banStatus : String
+  + toSafeObject()
+}
+
+class Book {
+  - id : Integer
+  - title : String
+  - author : String
+  - genre : String
+  - condition : BookCondition
+  - listingType : ListingType
+  - coinRequired : Integer
+  - pickupLocation : String
+  - status : BookStatus
+  - returnDays : Integer
+}
+
+class BookRequest {
+  - id : Integer
+  - requestType : RequestType
+  - message : String
+  - offeredBookId : Integer
+  - idDocumentUrl : String
+  - status : RequestStatus
+  - pickupDate : LocalDate
+  - pickupTime : String
+}
+
+class Transaction {
+  - id : Integer
+  - transactionType : TransactionType
+  - coinAmount : Integer
+  - status : TransactionStatus
+  - dueDate : LocalDate
+  - returnedAt : LocalDateTime
+}
+
+class BookReturn {
+  - id : Integer
+  - dueDate : LocalDate
+  - actualReturnDate : LocalDate
+  - fineAmount : Decimal
+  - status : ReturnStatus
+}
+
+class CoinLedger {
+  - id : Integer
+  - amount : Integer
+  - type : LedgerType
+  - reason : String
+  - referenceId : Integer
+}
+
+class Notification {
+  - id : Integer
+  - type : NotificationType
+  - title : String
+  - message : String
+  - referenceId : Integer
+  - isRead : Boolean
+}
+
+class Review {
+  - id : Integer
+  - rating : Integer
+  - comment : String
+}
+
+class UserVerification {
+  - id : Integer
+  - nidFrontImage : String
+  - status : VerificationStatus
+  - verifiedAt : LocalDateTime
+  - rejectionReason : String
+}
+
+class Report {
+  - id : Integer
+  - reason : String
+  - description : String
+  - status : ReportStatus
+  - resolutionNote : String
+}
+
+class AdminSetting {
+  - id : Integer
+  - key : String
+  - value : String
+  - description : String
+}
+
+class BanHistory {
+  - id : Integer
+  - action : BanAction
+  - reason : String
+}
+
+class Wishlist {
+  - id : Integer
+}
+
+User "1" -- "0..*" Book : owns
+User "1" -- "0..*" BookRequest : creates
+Book "1" -- "0..*" BookRequest : receives
+BookRequest "0..*" -- "0..1" Book : offers
+Book "1" -- "0..*" Transaction : transacted
+User "1" -- "0..*" Transaction : giver
+User "1" -- "0..*" Transaction : receiver
+Transaction "1" -- "0..1" BookReturn : has
+User "1" -- "0..*" CoinLedger : owns
+User "1" -- "0..*" Notification : receives
+User "1" -- "0..*" Review : writes
+User "1" -- "0..*" Review : receives
+Book "1" -- "0..*" Review : reviewed for
+User "1" -- "0..*" UserVerification : submits
+User "1" -- "0..*" Report : submits
+User "1" -- "0..*" Report : reported
+Transaction "1" -- "0..*" Report : referenced
+User "1" -- "0..*" BanHistory : moderated
+User "1" -- "0..*" Wishlist : saves
+Book "1" -- "0..*" Wishlist : saved item
+User "1" -- "0..*" AdminSetting : updates
+
+@enduml

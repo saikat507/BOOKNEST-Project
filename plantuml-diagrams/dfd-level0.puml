@@ -1,0 +1,62 @@
+@startuml
+title Figure 3.2: DFD Level 0 - BookNest Context Diagram
+
+scale max 1600*1050
+skinparam shadowing false
+skinparam dpi 150
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+skinparam titleFontSize 18
+skinparam titleFontStyle plain
+skinparam rectangle {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+  FontSize 11
+}
+skinparam database {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+  FontSize 10
+}
+skinparam cloud {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+  FontSize 10
+}
+skinparam actor {
+  BackgroundColor #F8F8F8
+  BorderColor #444444
+  FontSize 10
+}
+skinparam ArrowColor #555555
+skinparam ArrowFontColor #111111
+skinparam ArrowFontSize 8
+
+actor "Visitor" as Visitor
+actor "Registered User" as User
+actor "Book Owner" as Owner
+actor "Admin" as Admin
+rectangle "BookNest System" as System
+database "MySQL Database" as DB
+cloud "Cloudinary" as Cloudinary
+cloud "Email Service" as Email
+
+Visitor --> System : registration data,\nlogin credentials,\nbook browsing request
+System --> Visitor : public book list,\nauth result,\nOTP email trigger
+
+User --> System : profile data,\nbook listing,\nbook request,\nreview/report,\nreturn confirmation
+System --> User : JWT session,\nbooks, requests,\nwallet, notifications
+
+Owner --> System : approve/reject request,\ncomplete transaction
+System --> Owner : request alerts,\ntransaction status,\ncoin updates
+
+Admin --> System : moderation actions,\nverification decisions,\ncoin adjustments,\nsettings updates
+System --> Admin : dashboard stats,\nusers, reports,\ntransactions
+
+System <--> DB : users, books,\nrequests, transactions,\ncoins, reports
+System --> Cloudinary : upload book/profile/ID images
+Cloudinary --> System : secure image URLs
+System --> Email : welcome and OTP email
+
+@enduml

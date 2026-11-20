@@ -1,0 +1,86 @@
+@startuml
+title Figure 3.11: Sequence Diagram - Login
+
+scale max 1100*1600
+skinparam dpi 150
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 9
+skinparam titleFontSize 18
+skinparam titleFontStyle plain
+hide footbox
+autonumber
+skinparam sequence {
+  ParticipantBackgroundColor #DDF2DF
+  ParticipantBorderColor #579662
+  LifeLineBorderColor #777777
+  LifeLineBackgroundColor #F7FFF7
+  ArrowColor #555555
+  ActorBorderColor #444444
+  ActorBackgroundColor #F8F8F8
+  GroupBackgroundColor #F7FFF7
+  GroupBorderColor #579662
+  MessageAlign center
+  ParticipantFontSize 8
+  ActorFontSize 9
+  ArrowFontSize 8
+}
+
+actor "User / Admin" as User
+participant "React Login Page" as UI
+participant "Axios API Client" as Axios
+participant "auth.routes" as Routes
+participant "AuthController" as AuthController
+participant "User Model" as UserModel
+database "MySQL Database" as DB
+
+User -> UI : Enter email, password,\nand selected role
+UI -> Axios : POST /api/auth/login\nor /api/auth/admin/login
+Axios -> Routes : Send credentials
+
+alt Admin login endpoint
+  Routes -> AuthController : adminLogin(req)
+  AuthController -> AuthController : Set role = admin
+else User login endpoint
+  Routes -> AuthController : login(req)
+endif
+
+AuthController -> AuthController : Validate required fields
+AuthController -> UserModel : findOne({ email })
+UserModel -> DB : SELECT user by email
+DB --> UserModel : User row or null
+UserModel --> AuthController : User data
+
+alt User not found
+  AuthController --> Routes : 401 Invalid email or password
+  Routes --> Axios : Error response
+  Axios --> UI : Show login error
+else Role mismatch
+  AuthController --> Routes : 403 Wrong account role
+  Routes --> Axios : Error response
+  Axios --> UI : Show role error
+else Account blocked or inactive
+  AuthController --> Routes : 403 Account blocked
+  Routes --> Axios : Error response
+  Axios --> UI : Show blocked account message
+else Valid account
+  AuthController -> AuthController : bcrypt.compare(password,\npassword_hash)
+
+  alt Invalid password
+    AuthController --> Routes : 401 Invalid email or password
+    Routes --> Axios : Error response
+    Axios --> UI : Show login error
+  else Password valid
+    AuthController -> AuthController : Sign JWT\n(id, email, role)
+    AuthController -> AuthController : Build safe user object\nwithout sensitive fields
+    AuthController --> Routes : 200 token + user
+    Routes --> Axios : Login success response
+    Axios --> UI : Auth payload
+    UI -> UI : Store booknest_token\nin localStorage
+    UI -> UI : Update AuthContext user
+    UI --> User : Redirect to app/dashboard
+  endif
+endif
+
+@enduml

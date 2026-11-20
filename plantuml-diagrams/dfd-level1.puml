@@ -1,0 +1,111 @@
+@startuml
+title Figure 3.3: DFD Level 1 - BookNest
+
+scale max 1600*1050
+skinparam shadowing false
+left to right direction
+skinparam dpi 150
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 9
+skinparam titleFontSize 18
+skinparam titleFontStyle plain
+skinparam rectangle {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+  FontSize 9
+}
+skinparam database {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+  FontSize 8
+}
+skinparam cloud {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+  FontSize 8
+}
+skinparam actor {
+  BackgroundColor #F8F8F8
+  BorderColor #444444
+  FontSize 9
+}
+skinparam ArrowColor #555555
+skinparam ArrowFontColor #111111
+skinparam ArrowFontSize 7
+
+actor Visitor
+actor "Registered User" as User
+actor "Book Owner" as Owner
+actor Admin
+
+rectangle "1.0 Authentication\nand Profile" as P1
+rectangle "2.0 Book Listing\nand Discovery" as P2
+rectangle "3.0 Request and\nTransaction Processing" as P3
+rectangle "4.0 Coin Wallet\nand Ledger" as P4
+rectangle "5.0 Notifications\nand Email" as P5
+rectangle "6.0 Admin Moderation\nand Settings" as P6
+rectangle "7.0 Verification,\nReports and Returns" as P7
+
+database "D1 Users" as D1
+database "D2 Books" as D2
+database "D3 BookRequests" as D3
+database "D4 Transactions" as D4
+database "D5 CoinLedger" as D5
+database "D6 Notifications" as D6
+database "D7 Verification,\nReports, Returns" as D7
+database "D8 AdminSettings,\nBanHistory" as D8
+cloud "Cloudinary" as Cloudinary
+cloud "SMTP Email" as SMTP
+
+Visitor --> P1 : register, login,\nforgot password
+P1 --> Visitor : JWT, user data,\nOTP response
+P1 <--> D1 : create/read/update user
+P1 --> P4 : signup bonus
+P1 --> P5 : welcome/OTP message
+P1 --> Cloudinary : profile/ID upload
+
+Visitor --> P2 : browse books
+User --> P2 : add/edit/delete/list books
+P2 <--> D2 : book data
+P2 --> Cloudinary : cover image upload
+P2 --> User : book list/details
+
+User --> P3 : create request,\ncomplete transaction
+Owner --> P3 : approve/reject request
+P3 <--> D3 : request data
+P3 <--> D4 : transaction data
+P3 <--> D2 : book status
+P3 --> P4 : deduct, award,\nrefund, fine coins
+P3 --> P5 : request and transaction alerts
+P3 --> P7 : adoption return record
+
+User --> P4 : view wallet/ledger
+Admin --> P4 : award or adjust coins
+P4 <--> D1 : coin balance
+P4 <--> D5 : ledger entries
+P4 --> User : balance and history
+
+P5 <--> D6 : notification records
+P5 --> SMTP : send email
+P5 --> User : notifications
+P5 --> Owner : notifications
+
+User --> P7 : upload verification,\nsubmit report,\nmark return
+P7 <--> D7 : verification,\nreports, returns
+P7 <--> D4 : transaction status
+P7 --> P4 : late fine/refund
+P7 --> P5 : status alerts
+
+Admin --> P6 : user/book/report/\nverification/settings actions
+P6 <--> D1 : users
+P6 <--> D2 : books
+P6 <--> D3 : requests
+P6 <--> D4 : transactions
+P6 <--> D7 : reports/verifications
+P6 <--> D8 : settings and bans
+P6 --> P4 : coin adjustment
+P6 --> P5 : moderation alerts
+P6 --> Admin : dashboard and results
+
+@enduml

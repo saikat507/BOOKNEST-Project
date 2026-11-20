@@ -1,0 +1,90 @@
+@startuml
+title Figure 3.7: Sequence Diagram - Book Request and Appointment
+
+scale max 1100*1600
+skinparam shadowing false
+autonumber
+hide footbox
+skinparam dpi 150
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 9
+skinparam titleFontSize 18
+skinparam titleFontStyle plain
+skinparam sequence {
+  ParticipantBackgroundColor #DDF2DF
+  ParticipantBorderColor #579662
+  LifeLineBorderColor #777777
+  LifeLineBackgroundColor #F7FFF7
+  ArrowColor #555555
+  ActorBorderColor #444444
+  ActorBackgroundColor #F8F8F8
+  GroupBackgroundColor #F7FFF7
+  GroupBorderColor #579662
+  MessageAlign center
+  ParticipantFontSize 8
+  ActorFontSize 9
+  ArrowFontSize 8
+}
+
+actor "Requester" as Requester
+actor "Book Owner" as Owner
+participant "React UI\nBookDetail / RequestModal" as UI
+participant "Axios API Client" as Axios
+participant "Request Routes" as Routes
+participant "JWT Middleware" as AuthMW
+participant "RequestController" as RequestController
+participant "CoinService" as CoinService
+database "MySQL" as DB
+collections "Notification Records" as Notifications
+
+Requester -> UI : choose listing action\nand submit request
+UI -> Axios : POST /api/requests\nbook_id, request_type,\nmessage, offered_book_id
+Axios -> Routes : Bearer JWT
+Routes -> AuthMW : verifyToken()
+AuthMW -> DB : load active user
+AuthMW --> Routes : req.user
+Routes -> RequestController : createRequest(req)
+RequestController -> DB : SELECT Book
+RequestController -> DB : check duplicate pending request
+
+alt Exchange request
+  RequestController -> DB : validate offered_book_id\nbelongs to requester
+else Buy request
+  RequestController -> DB : check requester coin_balance\nagainst book.coin_required
+else Adopt request with deposit
+  RequestController -> CoinService : deductCoins(requester,\ndeposit, adopt_deposit)
+  CoinService -> DB : UPDATE User balance\nINSERT CoinLedger
+end
+
+RequestController -> DB : INSERT BookRequest
+RequestController -> Notifications : INSERT owner notification
+RequestController --> Axios : 201 request created
+Axios --> UI : show success
+UI --> Owner : owner sees notification
+
+Owner -> UI : approve request
+UI -> Axios : PATCH /api/requests/{id}/approve
+Axios -> Routes : Bearer JWT
+Routes -> AuthMW : verifyToken()
+Routes -> RequestController : approveRequest(req)
+RequestController -> DB : SELECT BookRequest and Book
+RequestController -> DB : verify owner or admin
+RequestController -> DB : UPDATE BookRequest approved
+RequestController -> DB : UPDATE Book pending
+RequestController -> DB : reject other pending requests
+RequestController -> DB : INSERT Transaction
+
+alt Adoption
+  RequestController -> DB : INSERT BookReturn\nwith due_date
+  RequestController -> CoinService : award owner adopt reward
+  CoinService -> DB : UPDATE User balance\nINSERT CoinLedger
+else Exchange
+  RequestController -> DB : UPDATE offered book pending
+end
+
+RequestController -> Notifications : INSERT requester approval notification
+RequestController --> Axios : transaction + request
+Axios --> UI : show approved state
+
+@enduml

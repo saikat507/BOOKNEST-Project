@@ -1,0 +1,151 @@
+@startuml
+title Figure 3.10: Activity Diagram - Book Request and Coin Settlement
+
+scale max 1100*1600
+skinparam dpi 150
+skinparam shadowing false
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+skinparam titleFontSize 18
+skinparam titleFontStyle plain
+skinparam activity {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+  FontColor #111111
+  FontSize 10
+}
+skinparam partition {
+  BackgroundColor #F7FFF7
+  BorderColor #579662
+  FontSize 11
+}
+skinparam ArrowColor #555555
+skinparam ArrowFontColor #111111
+skinparam ArrowFontSize 8
+skinparam DiamondBackgroundColor #DDF2DF
+skinparam DiamondBorderColor #579662
+
+start
+
+partition "Requester" {
+  :Browse available books;
+  :Select a book;
+  :Submit request type\n(donate, exchange, adopt, buy);
+}
+
+partition "BookNest System" {
+  :Validate JWT token;
+  :Load book and requester;
+
+  if (Book available?) then (yes)
+    if (Requester is not owner?) then (yes)
+      :Check duplicate pending request;
+    else (no)
+      :Reject request;
+      stop
+    endif
+  else (no)
+    :Reject request;
+    stop
+  endif
+
+  if (Duplicate pending request?) then (yes)
+    :Reject request;
+    stop
+  else (no)
+  endif
+}
+
+partition "Coin Service" {
+  if (Request type is buy?) then (yes)
+    :Check requester coin balance;
+    if (Enough coins?) then (yes)
+    else (no)
+      :Return insufficient coin error;
+      stop
+    endif
+  elseif (Request type is adopt\nand deposit required?) then (yes)
+    :Deduct deposit coins\nfrom requester;
+    :Create debit entry\nin CoinLedger;
+  else (donate/exchange)
+  endif
+}
+
+partition "BookNest System" {
+  :Create BookRequest;
+  :Notify book owner;
+}
+
+partition "Book Owner" {
+  :Review incoming request;
+  if (Approve request?) then (yes)
+  else (reject)
+    :Reject request;
+  endif
+}
+
+partition "BookNest System" {
+  if (Owner rejected?) then (yes)
+    :Update request status\nto rejected;
+    :Notify requester;
+    stop
+  else (approved)
+    :Update request status\nto approved;
+    :Set book status\nto pending;
+    :Reject other pending requests\nfor same book;
+    :Create Transaction record;
+
+    if (Adoption request?) then (yes)
+      :Create BookReturn record\nwith due date;
+    elseif (Exchange request?) then (yes)
+      :Set offered book status\nto pending;
+    else (donate/buy)
+    endif
+
+    :Notify requester\nabout approval;
+  endif
+}
+
+partition "Requester / Owner" {
+  :Complete handover;
+  :Confirm transaction completion;
+}
+
+partition "BookNest System" {
+  :Set transaction status\nto completed;
+  :Set request status\nto completed;
+  :Set book status\nto completed;
+}
+
+partition "Coin Service" {
+  if (Transaction type is donate?) then (yes)
+    :Award donation reward\nto giver;
+    :Create credit ledger entry;
+  elseif (Transaction type is exchange?) then (yes)
+    :Award exchange reward\nto giver;
+    :Award exchange reward\nto receiver;
+    :Create credit ledger entries;
+  elseif (Transaction type is sell?) then (yes)
+    :Deduct purchase coins\nfrom receiver;
+    :Award sale coins\nto giver;
+    :Create debit and credit\nledger entries;
+  elseif (Transaction type is adopt?) then (yes)
+    :Calculate late fine\nif returned after due date;
+    if (Late fine exists?) then (yes)
+      :Deduct fine coins\nfrom receiver;
+      :Create debit ledger entry;
+    else (no)
+    endif
+    :Refund adoption deposit\nto receiver;
+    :Create credit ledger entry;
+  endif
+}
+
+partition "BookNest System" {
+  :Create coin update notifications\nfor both parties;
+  :Return success response;
+}
+
+stop
+@enduml

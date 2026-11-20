@@ -1,0 +1,94 @@
+@startuml
+title Figure 3.8: Sequence Diagram - Admin Moderation
+
+scale max 1100*1600
+skinparam shadowing false
+autonumber
+hide footbox
+skinparam dpi 150
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 9
+skinparam titleFontSize 18
+skinparam titleFontStyle plain
+skinparam sequence {
+  ParticipantBackgroundColor #DDF2DF
+  ParticipantBorderColor #579662
+  LifeLineBorderColor #777777
+  LifeLineBackgroundColor #F7FFF7
+  ArrowColor #555555
+  ActorBorderColor #444444
+  ActorBackgroundColor #F8F8F8
+  GroupBackgroundColor #F7FFF7
+  GroupBorderColor #579662
+  MessageAlign center
+  ParticipantFontSize 8
+  ActorFontSize 9
+  ArrowFontSize 8
+}
+
+actor Admin
+participant "React Admin Pages" as UI
+participant "Axios API Client" as Axios
+participant "auth.routes" as AuthRoutes
+participant "admin.routes" as Routes
+participant "AuthController" as AuthController
+participant "Admin Auth / Role Guard" as Guard
+participant "AdminController" as AdminController
+participant "CoinService" as CoinService
+database "MySQL" as DB
+collections "Notifications" as Notifications
+
+Admin -> UI : login as admin
+UI -> Axios : POST /api/auth/admin/login
+Axios -> AuthRoutes : credentials
+AuthRoutes -> AuthController : adminLogin(req)
+AuthController -> DB : validate user role = admin
+AuthController --> UI : JWT + admin user
+
+Admin -> UI : open dashboard
+UI -> Axios : GET /api/admin/stats
+Axios -> Routes : Bearer JWT
+Routes -> Guard : verify admin token
+Guard -> DB : load user and role
+Guard --> Routes : authorized
+Routes -> AdminController : getDashboardStats()
+AdminController -> DB : count users, books,\nrequests, transactions,\nreports
+AdminController --> UI : dashboard stats
+
+alt Verification decision
+  Admin -> UI : approve or reject ID
+  UI -> Axios : POST /api/admin/verifications/{id}/approve\nor /reject
+  Routes -> Guard : verify admin
+  Routes -> AdminController : approveVerification()\nor rejectVerification()
+  AdminController -> DB : update UserVerification
+  AdminController -> DB : mirror status on User
+  AdminController -> Notifications : notify user
+  AdminController --> UI : decision result
+else User moderation
+  Admin -> UI : block, unblock,\nban, or warn user
+  UI -> Axios : POST /api/admin/users/{id}/...
+  Routes -> Guard : verify admin
+  Routes -> AdminController : moderation action
+  AdminController -> DB : update User active/ban fields
+  AdminController -> DB : insert BanHistory
+  AdminController -> Notifications : notify affected user
+  AdminController --> UI : moderation result
+else Coin adjustment
+  Admin -> UI : adjust user coins
+  UI -> Axios : POST /api/admin/coins/adjust
+  Routes -> Guard : verify admin
+  Routes -> AdminController : adminAdjustCoins()
+  AdminController -> CoinService : awardCoins() or deductCoins()
+  CoinService -> DB : update balance and ledger
+  AdminController --> UI : updated balance
+else Report resolution
+  Admin -> UI : resolve report
+  UI -> Axios : POST /api/admin/reports/{id}/resolve
+  Routes -> Guard : verify admin
+  Routes -> AdminController : resolveReport()
+  AdminController -> DB : update Report status,\nresolution_note, resolved_by
+  AdminController --> UI : report resolved
+end
+
+@enduml

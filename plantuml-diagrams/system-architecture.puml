@@ -1,0 +1,141 @@
+@startuml
+title Figure 3.9: System Architecture - BookNest
+
+scale max 1600*1050
+skinparam componentStyle rectangle
+skinparam shadowing false
+skinparam packageStyle rectangle
+skinparam dpi 150
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 9
+skinparam titleFontSize 18
+skinparam titleFontStyle plain
+skinparam rectangle {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+}
+skinparam component {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+  FontSize 8
+}
+skinparam package {
+  BackgroundColor #F7FFF7
+  BorderColor #579662
+  FontSize 9
+}
+skinparam node {
+  BackgroundColor #FFFFFF
+  BorderColor #579662
+  FontSize 10
+}
+skinparam database {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+}
+skinparam cloud {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+}
+skinparam ArrowColor #555555
+skinparam ArrowFontColor #111111
+skinparam ArrowFontSize 7
+
+actor "Visitor" as Visitor
+actor "Registered User" as User
+actor "Admin" as Admin
+
+node "Browser" {
+  package "React + Vite Frontend" as FE {
+    [Pages\nHome, Books, Profile,\nWallet, Admin Dashboard] as Pages
+    [Components\nNavbar, BookCard,\nRequestModal, Guards] as Components
+    [Contexts\nAuthContext, CoinContext] as Contexts
+    [Axios API Client\nJWT interceptor] as Axios
+  }
+}
+
+node "Node.js Backend" {
+  [Express App] as Express
+  package "Routes" as Routes {
+    [auth.routes] as AuthRoutes
+    [book.routes] as BookRoutes
+    [request.routes] as RequestRoutes
+    [coin.routes] as CoinRoutes
+    [admin.routes] as AdminRoutes
+    [notification.routes] as NotificationRoutes
+    [review.routes] as ReviewRoutes
+    [return.routes] as ReturnRoutes
+    [report.routes] as ReportRoutes
+    [user.routes] as UserRoutes
+  }
+  package "Middleware" as Middleware {
+    [JWT Auth] as JwtAuth
+    [Role Guard] as RoleGuard
+    [Multer Upload] as Upload
+    [Error Handler] as ErrorHandler
+  }
+  package "Controllers" as Controllers {
+    [Auth Controller] as AuthController
+    [Book Controller] as BookController
+    [Request Controller] as RequestController
+    [Coin Controller] as CoinController
+    [Admin Controller] as AdminController
+    [Notification Controller] as NotificationController
+    [Return Controller] as ReturnController
+    [Report Controller] as ReportController
+  }
+  package "Services / Utils" as Services {
+    [Coin Service] as CoinService
+    [Verification Service] as VerificationService
+    [Settings Service] as SettingsService
+    [Email Service] as EmailService
+  }
+  [Sequelize Models] as Models
+}
+
+database "MySQL Database\nbooknest" as DB
+cloud "Cloudinary\nbook covers, profiles, IDs" as Cloudinary
+cloud "Email Provider\nNodemailer SMTP" as SMTP
+
+Visitor --> Pages : browse books
+User --> Pages : manage books,\nrequests, wallet
+Admin --> Pages : moderation,\nreports, settings
+
+Pages --> Components
+Pages --> Contexts
+Contexts --> Axios
+Components --> Axios
+Axios --> Express : REST /api/*\nBearer JWT
+
+Express --> AuthRoutes
+Express --> BookRoutes
+Express --> RequestRoutes
+Express --> CoinRoutes
+Express --> AdminRoutes
+Express --> NotificationRoutes
+Express --> ReviewRoutes
+Express --> ReturnRoutes
+Express --> ReportRoutes
+Express --> UserRoutes
+
+AuthRoutes --> JwtAuth
+BookRoutes --> JwtAuth
+RequestRoutes --> JwtAuth
+CoinRoutes --> JwtAuth
+AdminRoutes --> RoleGuard
+
+Routes --> Controllers
+Controllers --> Services
+Controllers --> Models
+JwtAuth --> Models : load user
+RoleGuard --> Models : verify admin role
+Upload --> Cloudinary : upload files
+AuthController --> EmailService
+EmailService --> SMTP
+Models --> DB : Sequelize ORM
+CoinService --> DB : transactional balance\nand ledger updates
+SettingsService --> DB : admin settings
+ErrorHandler <-- Controllers
+
+@enduml

@@ -1,0 +1,205 @@
+@startuml
+title Figure 3.5: Entity Relationship Diagram - BookNest
+
+scale max 1600*1050
+hide circle
+skinparam linetype ortho
+skinparam shadowing false
+skinparam dpi 150
+skinparam backgroundColor white
+skinparam nodesep 26
+skinparam ranksep 24
+skinparam defaultFontName Arial
+skinparam defaultFontSize 10
+skinparam titleFontSize 18
+skinparam titleFontStyle plain
+skinparam entity {
+  BackgroundColor #DDF2DF
+  BorderColor #579662
+  HeaderBackgroundColor #9FD3A4
+  HeaderFontColor #111111
+  FontColor #111111
+  FontSize 8
+}
+skinparam ArrowColor #555555
+skinparam ArrowFontColor #111111
+skinparam ArrowFontSize 8
+
+entity "User" as User {
+  * id : INTEGER <<PK>>
+  --
+  name : STRING
+  email : STRING <<UNIQUE>>
+  password_hash : STRING
+  phone : STRING
+  role : ENUM(admin, moderator, verified_user, user)
+  verification_status : ENUM(pending, approved, rejected)
+  coin_balance : INTEGER
+  profile_image_url : STRING
+  address : STRING
+  is_active : BOOLEAN
+  ban_status : ENUM(none, blocked, banned)
+  otp : STRING
+  otp_expires_at : DATE
+}
+
+entity "Book" as Book {
+  * id : INTEGER <<PK>>
+  --
+  * user_id : INTEGER <<FK>>
+  title : STRING
+  author : STRING
+  genre : STRING
+  condition : ENUM(new, good, fair, poor)
+  listing_type : ENUM(donate, exchange, adopt, sell)
+  price : DECIMAL
+  coin_required : INTEGER
+  pickup_location : STRING
+  status : ENUM(available, pending, completed, closed)
+  return_days : INTEGER
+}
+
+entity "BookRequest" as BookRequest {
+  * id : INTEGER <<PK>>
+  --
+  * book_id : INTEGER <<FK>>
+  * requester_id : INTEGER <<FK>>
+  request_type : ENUM(donate, exchange, adopt, buy)
+  offered_book_id : INTEGER
+  id_document_url : STRING
+  status : ENUM(pending, approved, rejected, completed)
+  pickup_date : DATE
+  pickup_time : STRING
+}
+
+entity "Transaction" as Transaction {
+  * id : INTEGER <<PK>>
+  --
+  * book_id : INTEGER <<FK>>
+  * giver_id : INTEGER <<FK>>
+  * receiver_id : INTEGER <<FK>>
+  request_id : INTEGER
+  transaction_type : ENUM(donate, exchange, adopt, sell)
+  coin_amount : INTEGER
+  status : ENUM(ongoing, completed, overdue, cancelled)
+  due_date : DATE
+  returned_at : DATE
+}
+
+entity "BookReturn" as BookReturn {
+  * id : INTEGER <<PK>>
+  --
+  * transaction_id : INTEGER <<FK>>
+  due_date : DATE
+  actual_return_date : DATE
+  fine_amount : DECIMAL
+  status : ENUM(borrowed, returned, late)
+}
+
+entity "CoinLedger" as CoinLedger {
+  * id : INTEGER <<PK>>
+  --
+  * user_id : INTEGER <<FK>>
+  amount : INTEGER
+  type : ENUM(credit, debit, earn, spend, admin_adjustment)
+  reason : STRING
+  reference_id : INTEGER
+}
+
+entity "Notification" as Notification {
+  * id : INTEGER <<PK>>
+  --
+  * user_id : INTEGER <<FK>>
+  type : ENUM(request, approved, rejected, coin_update, pickup_reminder, return_overdue)
+  title : STRING
+  message : TEXT
+  reference_id : INTEGER
+  is_read : BOOLEAN
+}
+
+entity "Review" as Review {
+  * id : INTEGER <<PK>>
+  --
+  * reviewer_id : INTEGER <<FK>>
+  * reviewed_user_id : INTEGER <<FK>>
+  book_id : INTEGER <<FK>>
+  rating : INTEGER
+  comment : TEXT
+}
+
+entity "UserVerification" as UserVerification {
+  * id : INTEGER <<PK>>
+  --
+  * user_id : INTEGER <<FK>>
+  nid_front_image : STRING
+  status : ENUM(pending, approved, rejected)
+  verified_by : INTEGER <<FK>>
+  verified_at : DATE
+  rejection_reason : TEXT
+}
+
+entity "Report" as Report {
+  * id : INTEGER <<PK>>
+  --
+  * reporter_id : INTEGER <<FK>>
+  * reported_user_id : INTEGER <<FK>>
+  book_id : INTEGER <<FK>>
+  transaction_id : INTEGER <<FK>>
+  reason : STRING
+  description : TEXT
+  status : ENUM(pending, reviewed, resolved, dismissed)
+  resolved_by : INTEGER <<FK>>
+}
+
+entity "AdminSetting" as AdminSetting {
+  * id : INTEGER <<PK>>
+  --
+  key : STRING <<UNIQUE>>
+  value : STRING
+  description : STRING
+  updated_by : INTEGER <<FK>>
+}
+
+entity "BanHistory" as BanHistory {
+  * id : INTEGER <<PK>>
+  --
+  * user_id : INTEGER <<FK>>
+  admin_id : INTEGER <<FK>>
+  action : ENUM(block, unblock, ban, warn)
+  reason : TEXT
+}
+
+entity "Wishlist" as Wishlist {
+  * id : INTEGER <<PK>>
+  --
+  * user_id : INTEGER <<FK>>
+  * book_id : INTEGER <<FK>>
+}
+
+User ||--o{ Book : owns
+User ||--o{ BookRequest : requests
+Book ||--o{ BookRequest : receives
+BookRequest }o--|| Book : offered_book
+Book ||--o{ Transaction : transacted
+User ||--o{ Transaction : giver
+User ||--o{ Transaction : receiver
+Transaction ||--o| BookReturn : return_record
+User ||--o{ CoinLedger : has
+User ||--o{ Notification : receives
+User ||--o{ Review : writes
+User ||--o{ Review : receives
+Book ||--o{ Review : reviewed_for
+User ||--o{ UserVerification : submits
+User ||--o{ UserVerification : verifies
+User ||--o{ Report : reports
+User ||--o{ Report : reported
+Book ||--o{ Report : about
+Transaction ||--o{ Report : about
+User ||--o{ Report : resolves
+User ||--o{ AdminSetting : updates
+User ||--o{ BanHistory : target
+User ||--o{ BanHistory : admin
+User ||--o{ Wishlist : saves
+Book ||--o{ Wishlist : saved
+
+@enduml

@@ -1,0 +1,92 @@
+@startuml
+title Figure 3.6: Sequence Diagram - Authentication
+
+scale max 1100*1600
+skinparam shadowing false
+autonumber
+hide footbox
+skinparam dpi 150
+skinparam backgroundColor white
+skinparam defaultFontName Arial
+skinparam defaultFontSize 9
+skinparam titleFontSize 18
+skinparam titleFontStyle plain
+skinparam sequence {
+  ParticipantBackgroundColor #DDF2DF
+  ParticipantBorderColor #579662
+  LifeLineBorderColor #777777
+  LifeLineBackgroundColor #F7FFF7
+  ArrowColor #555555
+  ActorBorderColor #444444
+  ActorBackgroundColor #F8F8F8
+  GroupBackgroundColor #F7FFF7
+  GroupBorderColor #579662
+  MessageAlign center
+  ParticipantFontSize 8
+  ActorFontSize 9
+  ArrowFontSize 8
+}
+
+actor User
+participant "React Login/Register Page" as UI
+participant "Axios API Client" as Axios
+participant "Express auth.routes" as Routes
+participant "AuthController" as Auth
+participant "User Model" as UserModel
+participant "CoinService" as Coins
+participant "EmailService" as Email
+database "MySQL" as DB
+
+alt Register
+  User -> UI : submit name, email,\npassword, phone
+  UI -> Axios : POST /api/auth/register
+  Axios -> Routes : request
+  Routes -> Auth : register(req)
+  Auth -> UserModel : findOne(email)
+  UserModel -> DB : SELECT user by email
+  DB --> UserModel : not found
+  Auth -> Auth : bcrypt.hash(password)
+  Auth -> UserModel : create user
+  UserModel -> DB : INSERT User
+  Auth -> Coins : award signup bonus
+  Coins -> DB : UPDATE coin_balance\nINSERT CoinLedger
+  Auth -> Email : sendWelcomeEmail()
+  Auth -> Auth : sign JWT
+  Auth --> Routes : token + safe user
+  Routes --> Axios : 201 Created
+  Axios --> UI : auth payload
+  UI -> UI : store booknest_token
+else Login
+  User -> UI : submit email,\npassword, role
+  UI -> Axios : POST /api/auth/login\nor /api/auth/admin/login
+  Axios -> Routes : request
+  Routes -> Auth : login(req)
+  Auth -> UserModel : findOne(email)
+  UserModel -> DB : SELECT user
+  DB --> UserModel : user
+  Auth -> Auth : validate role,\nactive status,\nbcrypt.compare()
+  Auth -> Auth : sign JWT
+  Auth --> Routes : token + safe user
+  Routes --> Axios : 200 OK
+  Axios --> UI : auth payload
+  UI -> UI : store token and user
+else Forgot password
+  User -> UI : submit email
+  UI -> Axios : POST /api/auth/forgot-password
+  Routes -> Auth : forgotPassword(req)
+  Auth -> UserModel : findOne(email)
+  Auth -> Auth : generate OTP
+  Auth -> DB : save otp and expiry
+  Auth -> Email : sendOTPEmail()
+  Auth --> UI : OTP sent
+else Reset password
+  User -> UI : submit email, OTP,\nnew password
+  UI -> Axios : POST /api/auth/reset-password
+  Routes -> Auth : resetPassword(req)
+  Auth -> UserModel : findOne(email)
+  Auth -> Auth : validate OTP and expiry
+  Auth -> DB : update password_hash,\nclear OTP
+  Auth --> UI : password reset success
+end
+
+@enduml
